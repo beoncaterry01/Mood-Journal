@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="My Mood Journal" />
+  <meta name="theme-color" content="#FF6B9D" />
+  <title>My Heart's Weekly Journal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow-x: hidden; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(160deg, #ffeef8 0%, #e8f4ff 50%, #fff0e8 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 10s ease infinite;
+      min-height: 100vh;
+    }
+
+    @keyframes gradientShift {
+      0%,100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-140px) scale(2); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(28px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes shimmer {
+      0%,100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.1); }
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg) translateX(55px) rotate(0deg); }
+      to { transform: rotate(360deg) translateX(55px) rotate(-360deg); }
+    }
+
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 16px 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      animation: shimmer 4s ease-in-out infinite;
+    }
+
+    /* Floating hearts */
+    .float-heart {
+      position: fixed;
+      font-size: 1.4rem;
+      pointer-events: none;
+      z-index: 999;
+      animation: floatUp 3.5s ease-in forwards;
+    }
+
+    /* Glass card */
+    .glass {
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.85);
+      border-radius: 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 36px 0 20px;
+    }
+    .header-heart {
+      font-size: 2.4rem;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #831843;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .header p {
+      color: #9D174D;
+      font-size: 0.82rem;
+      margin-top: 6px;
+      font-weight: 300;
+    }
+
+    /* Nav */
+    .nav {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .nav-btn {
+      padding: 9px 20px;
+      border-radius: 99px;
+      font-size: 0.82rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-btn.active {
+      background: linear-gradient(135deg, #FF6B9D, #A855F7);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(168,85,247,0.35);
+    }
+    .nav-btn.inactive {
+      background: rgba(255,255,255,0.6);
+      color: #6B21A8;
+      border: 1.5px solid #DDD6FE;
+    }
+
+    /* Day grid */
+    .day-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+    .day-card {
+      border-radius: 16px;
+      padding: 10px 3px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid transparent;
+    }
+    .day-card:active { transform: scale(0.95); }
+    .day-emoji { font-size: 1.1rem; }
+    .day-label { font-size: 0.58rem; font-weight: 700; margin-top: 2px; }
+    .day-mood { font-size: 0.95rem; margin-top: 3px; }
+    .day-done { font-size: 0.48rem; color: #10B981; margin-top: 2px; }
+    .day-tap { font-size: 0.48rem; color: #CBD5E1; margin-top: 4px; }
+
+    /* Progress */
+    .progress-card {
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 20px rgba(168,85,247,0.1);
+    }
+    .progress-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #7C3AED;
+      margin-bottom: 8px;
+    }
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #F3E8FF;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #A855F7, #EC4899);
+      border-radius: 99px;
+      transition: width 0.8s ease;
+    }
+    .progress-sub { font-size: 0.7rem; color: #9CA3AF; margin-top: 6px; }
+
+    /* Affirmation banner */
+    .affirm-banner {
+      border-radius: 20px;
+      padding: 22px 20px 18px;
+      color: #fff;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      animation: slideIn 0.5s ease;
+    }
+    .affirm-tag { font-size: 0.68rem; font-weight: 700; opacity: 0.8; letter-spacing: 1px; margin-bottom: 8px; }
+    .affirm-text { font-family: 'Playfair Display', serif; font-size: 1rem; font-style: italic; line-height: 1.6; }
+    .affirm-btn {
+      margin-top: 12px;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 99px;
+      color: #fff;
+      padding: 6px 16px;
+      font-size: 0.72rem;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    /* Open day btn */
+    .open-day-btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(168,85,247,0.3);
+      transition: all 0.2s;
+    }
+    .open-day-btn:active { transform: scale(0.97); }
+
+    /* Day view */
+    .day-header {
+      border-radius: 24px;
+      padding: 28px 20px 22px;
+      margin-bottom: 16px;
+      color: #fff;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      animation: slideIn 0.4s ease;
+    }
+    .day-header-emoji { font-size: 2.6rem; margin-bottom: 6px; }
+    .day-header h2 { font-family: 'Playfair Display', serif; font-size: 1.9rem; font-weight: 700; }
+    .day-header p { font-size: 0.8rem; opacity: 0.85; margin-top: 4px; }
+
+    /* Section cards */
+    .section-card {
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+      animation: slideIn 0.4s ease;
+    }
+    .section-tag {
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    /* Mood buttons */
+    .mood-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .mood-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 6px;
+      border-radius: 14px;
+      background: transparent;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.25s;
+      flex: 1;
+      margin: 0 2px;
+    }
+    .mood-btn:active { transform: scale(0.9); }
+    .mood-btn.selected { transform: scale(1.12); }
+    .mood-emoji { font-size: 1.7rem; }
+    .mood-label { font-size: 0.58rem; font-weight: 600; }
+
+    /* Bar */
+    .bar-track {
+      width: 100%;
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+      margin: 4px 0;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s cubic-bezier(.34,1.56,.64,1);
+    }
+    .mood-result { font-size: 0.72rem; color: #9CA3AF; text-align: center; margin-top: 4px; }
+
+    /* Textarea */
+    .journal-prompt {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.88rem;
+      color: #374151;
+      font-style: italic;
+      margin-bottom: 10px;
+      line-height: 1.55;
+    }
+    .journal-input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1.5px solid #F3E8FF;
+      background: rgba(255,255,255,0.8);
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.85rem;
+      color: #374151;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .journal-input:focus { border-color: #A855F7; }
+
+    /* Day nav */
+    .day-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .nav-arrow {
+      flex: 1;
+      padding: 13px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.75);
+      border: 1.5px solid #E5E7EB;
+      color: #6B7280;
+      font-size: 0.85rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-arrow:disabled { opacity: 0.4; cursor: not-allowed; }
+    .save-btn {
+      flex: 2;
+      padding: 13px;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .save-btn:active { transform: scale(0.97); }
+
+    .back-btn {
+      width: 100%;
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* Summary */
+    .summary-hero {
+      border-radius: 24px;
+      padding: 30px 20px;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #FF6B9D, #A855F7, #3B82F6);
+      background-size: 200% 200%;
+      animation: gradientShift 5s ease infinite, slideIn 0.4s ease;
+      box-shadow: 0 10px 30px rgba(168,85,247,0.4);
+    }
+    .summary-hero h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; font-weight: 700; }
+    .summary-score { font-family: 'Playfair Display', serif; font-size: 3.2rem; font-weight: 700; margin: 8px 0 2px; }
+    .summary-sub { font-size: 0.8rem; opacity: 0.9; }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .summary-day-label { font-size: 0.75rem; font-weight: 600; }
+    .summary-day-mood { font-size: 0.7rem; color: #9CA3AF; }
+
+    .note-entry { margin-bottom: 14px; padding-bottom: 14px; }
+    .note-day { font-size: 0.66rem; font-weight: 700; margin-bottom: 3px; }
+    .note-text { font-family: 'Playfair Display', serif; font-size: 0.85rem; color: #374151; font-style: italic; line-height: 1.5; }
+
+    .closing-card {
+      background: linear-gradient(135deg, #FEF3C7, #FCE7F3);
+      border-radius: 20px;
+      padding: 22px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(251,191,36,0.2);
+      margin-bottom: 16px;
+    }
+    .closing-text { font-family: 'Playfair Display', serif; font-size: 0.95rem; color: #831843; font-style: italic; line-height: 1.6; }
+
+    .view { display: none; }
+    .view.active { display: block; animation: slideIn 0.4s ease; }
+
+    .empty-note { font-size: 0.82rem; color: #D1D5DB; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<!-- Orbs -->
+<div class="orb" style="width:120px;height:120px;background:radial-gradient(circle,#FF6B9D33 0%,transparent 70%);top:8%;left:15%;animation-delay:0s;animation-duration:4s;"></div>
+<div class="orb" style="width:160px;height:160px;background:radial-gradient(circle,#A855F733 0%,transparent 70%);top:55%;left:65%;animation-delay:0.5s;animation-duration:5s;"></div>
+<div class="orb" style="width:100px;height:100px;background:radial-gradient(circle,#43C6AC33 0%,transparent 70%);top:30%;left:55%;animation-delay:1s;animation-duration:3.5s;"></div>
+<div class="orb" style="width:140px;height:140px;background:radial-gradient(circle,#F59E0B33 0%,transparent 70%);top:70%;left:10%;animation-delay:1.5s;animation-duration:4.5s;"></div>
+<div class="orb" style="width:90px;height:90px;background:radial-gradient(circle,#10B98133 0%,transparent 70%);top:20%;left:80%;animation-delay:2s;animation-duration:5s;"></div>
+
+<div id="app">
+  <div class="header">
+    <div class="header-heart" id="headerHeart">💗</div>
+    <h1>My Heart's<br/><em>Weekly Journal</em></h1>
+    <p>Track · Reflect · Grow · Love</p>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showView('week')" id="navWeek">🗓 Week</button>
+      <button class="nav-btn inactive" onclick="showView('summary')" id="navSummary">✨ Summary</button>
+    </div>
+  </div>
+
+  <!-- WEEK VIEW -->
+  <div class="view active" id="viewWeek">
+    <div class="day-grid" id="dayGrid"></div>
+
+    <div class="glass progress-card">
+      <div class="progress-label" id="progressLabel">WEEKLY PROGRESS · 0/7 days logged</div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-sub" id="progressSub">Start your journey — tap a day above ✨</div>
+    </div>
+
+    <div class="affirm-banner" id="affirmBanner">
+      <div class="affirm-tag">✦ TODAY'S LIGHT</div>
+      <p class="affirm-text" id="affirmText"></p>
+      <button class="affirm-btn" onclick="nextAffirm()">Refresh ✦</button>
+    </div>
+
+    <button class="open-day-btn" id="openDayBtn" onclick="showView('day')">Open Today's Journal Entry</button>
+  </div>
+
+  <!-- DAY VIEW -->
+  <div class="view" id="viewDay">
+    <div class="day-header" id="dayHeader">
+      <div class="day-header-emoji" id="dayHeaderEmoji"></div>
+      <h2 id="dayHeaderName"></h2>
+      <p>How is your heart today?</p>
+    </div>
+
+    <!-- Affirmation -->
+    <div class="glass section-card">
+      <div class="section-tag" id="affirmTag2">✦ AFFIRMATION</div>
+      <p class="journal-prompt" id="affirmText2"></p>
+      <button class="affirm-btn" id="affirmRefreshBtn" onclick="nextAffirm()" style="background:none;padding:5px 14px;">Refresh ✦</button>
+    </div>
+
+    <!-- Mood -->
+    <div class="glass section-card">
+      <div class="section-tag" style="color:#6B7280;">💫 HOW DO YOU FEEL?</div>
+      <div class="mood-row" id="moodRow"></div>
+      <div id="moodResult" style="display:none;">
+        <div class="bar-track"><div class="bar-fill" id="moodBar"></div></div>
+        <div class="mood-result" id="moodResultText"></div>
+      </div>
+    </div>
+
+    <!-- Love Update -->
+    <div class="glass section-card">
+      <div class="section-tag" style="color:#EC4899;">💗 LOVE UPDATE</div>
+      <p class="journal-prompt" id="lovePrompt"></p>
+      <textarea class="journal-input" id="loveInput" rows="3" placeholder="Write from your heart..."></textarea>
+    </div>
+
+    <!-- Change Evaluation -->
+    <div class="glass section-card">
+      <div class="section-tag" style="color:#7C3AED;">🌱 CHANGE EVALUATION</div>
+      <p class="journal-prompt" id="changePrompt"></p>
+      <textarea class="journal-input" id="changeInput" rows="3" placeholder="Reflect honestly and gently..."></textarea>
+    </div>
+
+    <div class="day-nav">
+      <button class="nav-arrow" id="prevBtn" onclick="changeDay(-1)">←</button>
+      <button class="save-btn" id="saveBtn" onclick="saveDay()">Save & ✦ Go ✦</button>
+      <button class="nav-arrow" id="nextBtn" onclick="changeDay(1)">→</button>
+    </div>
+    <button class="back-btn" onclick="showView('week')">← Back to Week View</button>
+  </div>
+
+  <!-- SUMMARY VIEW -->
+  <div class="view" id="viewSummary">
+    <div class="summary-hero">
+      <div style="font-size:2.6rem;margin-bottom:8px;">✨</div>
+      <h2>Your Week in Review</h2>
+      <div id="summaryScore"></div>
+    </div>
+
+    <div class="glass section-card">
+      <div class="section-tag" style="color:#6B7280;">📊 MOOD ACROSS THE WEEK</div>
+      <div id="summaryBars"></div>
+    </div>
+
+    <div class="glass section-card">
+      <div class="section-tag" style="color:#EC4899;">💗 YOUR LOVE NOTES THIS WEEK</div>
+      <div id="summaryLove"></div>
+    </div>
+
+    <div class="glass section-card">
+      <div class="section-tag" style="color:#7C3AED;">🌱 YOUR GROWTH REFLECTIONS</div>
+      <div id="summaryChange"></div>
+    </div>
+
+    <div class="closing-card">
+      <div style="font-size:1.6rem;margin-bottom:10px;">💗</div>
+      <p class="closing-text">"Every feeling you honored this week was an act of love. You are doing the beautiful, brave work of being human."</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = [
+  { short:"MON", full:"Monday",    emoji:"🌅", color:"#FF6B9D", gradient:"linear-gradient(135deg,#FF6B9D,#FF8E53)", bg:"linear-gradient(160deg,#ffe0ec,#fff3e0)" },
+  { short:"TUE", full:"Tuesday",   emoji:"🌿", color:"#43C6AC", gradient:"linear-gradient(135deg,#43C6AC,#2980B9)", bg:"linear-gradient(160deg,#d4f5ee,#dde8ff)" },
+  { short:"WED", full:"Wednesday", emoji:"✨", color:"#A855F7", gradient:"linear-gradient(135deg,#A855F7,#EC4899)", bg:"linear-gradient(160deg,#ede9fe,#fce7f3)" },
+  { short:"THU", full:"Thursday",  emoji:"☀️", color:"#F59E0B", gradient:"linear-gradient(135deg,#F59E0B,#EF4444)", bg:"linear-gradient(160deg,#fef3c7,#fee2e2)" },
+  { short:"FRI", full:"Friday",    emoji:"🎉", color:"#10B981", gradient:"linear-gradient(135deg,#10B981,#3B82F6)", bg:"linear-gradient(160deg,#d1fae5,#dbeafe)" },
+  { short:"SAT", full:"Saturday",  emoji:"💜", color:"#8B5CF6", gradient:"linear-gradient(135deg,#8B5CF6,#EC4899)", bg:"linear-gradient(160deg,#ede9fe,#fce7f3)" },
+  { short:"SUN", full:"Sunday",    emoji:"🌸", color:"#F43F5E", gradient:"linear-gradient(135deg,#F43F5E,#FB923C)", bg:"linear-gradient(160deg,#ffe4e6,#ffedd5)" },
+];
+
+const MOODS = [
+  { label:"Radiant",    value:5, emoji:"🌟", color:"#FFD700" },
+  { label:"Happy",      value:4, emoji:"😊", color:"#FF6B9D" },
+  { label:"Okay",       value:3, emoji:"😌", color:"#43C6AC" },
+  { label:"Low",        value:2, emoji:"😔", color:"#A78BFA" },
+  { label:"Struggling", value:1, emoji:"🌧️", color:"#94A3B8" },
+];
+
+const AFFIRMATIONS = [
+  ["You are worthy of all the love you give others.","Today, let your heart lead the way.","Your presence makes the world brighter."],
+  ["Growth happens one brave step at a time.","You are doing better than you think.","Your resilience is your superpower."],
+  ["You deserve the same compassion you show others.","Midweek magic — you're halfway there!","You are enough, exactly as you are."],
+  ["Your feelings are valid. Honor them.","Every challenge is shaping your strength.","You are loved more than you know."],
+  ["Celebrate how far you've come this week!","You bring joy to those around you.","Your light cannot be dimmed."],
+  ["Rest is sacred. You've earned it.","You are allowed to just BE today.","Love flows freely through you."],
+  ["Reflect on your wins — big and small.","You are a work of art in progress.","Tomorrow is a fresh canvas. You are ready."],
+];
+
+const LOVE_PROMPTS = [
+  "What's one thing your heart needs today?",
+  "Who lifted your spirit this week?",
+  "What small act of love can you offer yourself?",
+  "What does your soul feel grateful for?",
+  "How can you show yourself grace today?",
+  "What brings you the deepest peace?",
+  "What love will you carry into next week?",
+];
+
+const CHANGE_QUESTIONS = [
+  "What was your biggest emotional shift today?",
+  "What would you do differently tomorrow?",
+  "What helped you feel more like yourself?",
+  "What did today teach you about your needs?",
+  "What are you ready to release?",
+  "How have you grown from Monday to now?",
+  "What intention will you carry forward?",
+];
+
+// State
+let selectedDay = 0;
+let moods = {};
+let loveNotes = {};
+let changeNotes = {};
+let savedDays = {};
+let affirmIdx = [0,0,0,0,0,0,0];
+let currentView = 'week';
+
+// Load from localStorage
+function loadState() {
+  try {
+    const s = localStorage.getItem('moodJournalState');
+    if (s) {
+      const d = JSON.parse(s);
+      moods = d.moods || {};
+      loveNotes = d.loveNotes || {};
+      changeNotes = d.changeNotes || {};
+      savedDays = d.savedDays || {};
+      affirmIdx = d.affirmIdx || [0,0,0,0,0,0,0];
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('moodJournalState', JSON.stringify({ moods, loveNotes, changeNotes, savedDays, affirmIdx }));
+  } catch(e) {}
+}
+
+// Init
+function init() {
+  loadState();
+  const today = new Date().getDay();
+  selectedDay = today === 0 ? 6 : today - 1;
+  renderDayGrid();
+  renderWeekProgress();
+  renderAffirmBanner();
+  renderDayView();
+  renderSummary();
+  // Pulse heart
+  setInterval(() => {
+    const h = document.getElementById('headerHeart');
+    h.style.animation = 'pulse 0.6s ease';
+    setTimeout(() => h.style.animation = '', 700);
+  }, 3000);
+}
+
+function showView(v) {
+  currentView = v;
+  document.getElementById('viewWeek').classList.toggle('active', v === 'week');
+  document.getElementById('viewDay').classList.toggle('active', v === 'day');
+  document.getElementById('viewSummary').classList.toggle('active', v === 'summary');
+  document.getElementById('navWeek').className = 'nav-btn ' + (v === 'week' || v === 'day' ? 'active' : 'inactive');
+  document.getElementById('navSummary').className = 'nav-btn ' + (v === 'summary' ? 'active' : 'inactive');
+  if (v === 'day') renderDayView();
+  if (v === 'summary') renderSummary();
+  if (v === 'week') { renderDayGrid(); renderWeekProgress(); renderAffirmBanner(); }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderDayGrid() {
+  const grid = document.getElementById('dayGrid');
+  grid.innerHTML = '';
+  DAYS.forEach((d, i) => {
+    const mood = moods[i];
+    const saved = savedDays[i];
+    const isSelected = i === selectedDay;
+    const card = document.createElement('div');
+    card.className = 'day-card';
+    card.style.border = isSelected ? `2px solid ${d.color}` : '2px solid rgba(255,255,255,0.8)';
+    card.style.boxShadow = isSelected ? `0 4px 18px ${d.color}55` : '0 2px 8px rgba(0,0,0,0.05)';
+    card.innerHTML = `
+      <div class="day-emoji">${d.emoji}</div>
+      <div class="day-label" style="color:${d.color}">${d.short}</div>
+      ${mood ? `<div class="day-mood">${mood.emoji}</div>` : ''}
+      ${saved ? `<div class="day-done">✓ done</div>` : (!mood ? `<div class="day-tap">tap</div>` : '')}
+    `;
+    card.onclick = () => { selectedDay = i; showView('day'); };
+    grid.appendChild(card);
+  });
+
+  // Update open day button
+  const d = DAYS[selectedDay];
+  const btn = document.getElementById('openDayBtn');
+  btn.style.background = d.gradient;
+  btn.textContent = `${d.emoji} Open ${d.full}'s Journal Entry`;
+}
+
+function renderWeekProgress() {
+  const logged = Object.keys(moods).length;
+  document.getElementById('progressLabel').textContent = `WEEKLY PROGRESS · ${logged}/7 days logged`;
+  document.getElementById('progressFill').style.width = `${(logged/7)*100}%`;
+  document.getElementById('progressSub').textContent = logged === 0
+    ? "Start your journey — tap a day above ✨"
+    : logged === 7 ? "You completed the week! You're amazing 💗"
+    : `${7-logged} more days to complete your week`;
+}
+
+function renderAffirmBanner() {
+  const d = DAYS[selectedDay];
+  const banner = document.getElementById('affirmBanner');
+  banner.style.background = d.gradient;
+  document.getElementById('affirmText').textContent = `"${AFFIRMATIONS[selectedDay][affirmIdx[selectedDay]]}"`;
+}
+
+function nextAffirm() {
+  affirmIdx[selectedDay] = (affirmIdx[selectedDay] + 1) % AFFIRMATIONS[selectedDay].length;
+  saveState();
+  renderAffirmBanner();
+  if (currentView === 'day') {
+    document.getElementById('affirmText2').textContent = `"${AFFIRMATIONS[selectedDay][affirmIdx[selectedDay]]}"`;
+  }
+  spawnHearts();
+}
+
+function renderDayView() {
+  const d = DAYS[selectedDay];
+  // Header
+  document.getElementById('dayHeader').style.background = d.gradient;
+  document.getElementById('dayHeader').style.boxShadow = `0 10px 30px ${d.color}55`;
+  document.getElementById('dayHeaderEmoji').textContent = d.emoji;
+  document.getElementById('dayHeaderName').textContent = d.full;
+
+  // Affirmation
+  document.getElementById('affirmTag2').style.color = d.color;
+  document.getElementById('affirmText2').textContent = `"${AFFIRMATIONS[selectedDay][affirmIdx[selectedDay]]}"`;
+  const rb = document.getElementById('affirmRefreshBtn');
+  rb.style.border = `1.5px solid ${d.color}`;
+  rb.style.color = d.color;
+
+  // Prompts
+  document.getElementById('lovePrompt').textContent = LOVE_PROMPTS[selectedDay];
+  document.getElementById('changePrompt').textContent = CHANGE_QUESTIONS[selectedDay];
+
+  // Restore notes
+  document.getElementById('loveInput').value = loveNotes[selectedDay] || '';
+  document.getElementById('changeInput').value = changeNotes[selectedDay] || '';
+
+  // Mood buttons
+  const row = document.getElementById('moodRow');
+  row.innerHTML = '';
+  MOODS.forEach(m => {
+    const selected = moods[selectedDay]?.value === m.value;
+    const btn = document.createElement('button');
+    btn.className = 'mood-btn' + (selected ? ' selected' : '');
+    btn.style.background = selected ? `${m.color}22` : 'transparent';
+    btn.style.border = `2px solid ${selected ? m.color : 'transparent'}`;
+    btn.innerHTML = `<span class="mood-emoji">${m.emoji}</span><span class="mood-label" style="color:${selected ? m.color : '#9CA3AF'}">${m.label}</span>`;
+    btn.onclick = () => selectMood(m);
+    row.appendChild(btn);
+  });
+
+  // Show mood bar if set
+  updateMoodBar();
+
+  // Nav arrows
+  document.getElementById('prevBtn').disabled = selectedDay === 0;
+  document.getElementById('nextBtn').disabled = selectedDay === 6;
+  document.getElementById('prevBtn').textContent = selectedDay > 0 ? `← ${DAYS[selectedDay-1].short}` : '←';
+  document.getElementById('nextBtn').textContent = selectedDay < 6 ? `${DAYS[selectedDay+1].short} →` : '→';
+
+  const sb = document.getElementById('saveBtn');
+  sb.style.background = d.gradient;
+  sb.style.boxShadow = `0 4px 15px ${d.color}44`;
+}
+
+function selectMood(m) {
+  moods[selectedDay] = m;
+  saveState();
+  spawnHearts();
+  renderDayView();
+}
+
+function updateMoodBar() {
+  const m = moods[selectedDay];
+  const result = document.getElementById('moodResult');
+  if (m) {
+    result.style.display = 'block';
+    document.getElementById('moodBar').style.width = `${(m.value/5)*100}%`;
+    document.getElementById('moodBar').style.background = m.color;
+    document.getElementById('moodResultText').textContent = `${m.emoji} Feeling ${m.label}`;
+  } else {
+    result.style.display = 'none';
+  }
+}
+
+function saveDay() {
+  loveNotes[selectedDay] = document.getElementById('loveInput').value;
+  changeNotes[selectedDay] = document.getElementById('changeInput').value;
+  savedDays[selectedDay] = true;
+  saveState();
+  spawnHearts();
+  setTimeout(() => showView('week'), 350);
+}
+
+function changeDay(dir) {
+  // Save current notes first
+  loveNotes[selectedDay] = document.getElementById('loveInput').value;
+  changeNotes[selectedDay] = document.getElementById('changeInput').value;
+  saveState();
+  selectedDay = Math.max(0, Math.min(6, selectedDay + dir));
+  renderDayView();
+}
+
+function renderSummary() {
+  const logged = Object.keys(moods).length;
+  const total = Object.values(moods).reduce((a, b) => a + (b?.value || 0), 0);
+  const avg = logged > 0 ? (total / logged).toFixed(1) : null;
+
+  document.getElementById('summaryScore').innerHTML = avg
+    ? `<div class="summary-score">${avg}</div><div class="summary-sub">across ${logged} days logged</div>`
+    : `<p style="margin-top:10px;font-size:0.88rem;opacity:0.85">Start logging days to see your summary!</p>`;
+
+  // Mood bars
+  const barsEl = document.getElementById('summaryBars');
+  barsEl.innerHTML = '';
+  DAYS.forEach((d, i) => {
+    const m = moods[i];
+    barsEl.innerHTML += `
+      <div style="margin-bottom:12px;">
+        <div class="summary-row">
+          <span class="summary-day-label" style="color:${d.color}">${d.emoji} ${d.full}</span>
+          <span class="summary-day-mood">${m ? `${m.emoji} ${m.label}` : '—'}</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" style="width:${m ? (m.value/5)*100 : 0}%;background:${d.color}"></div></div>
+      </div>`;
+  });
+
+  // Love notes
+  const loveEl = document.getElementById('summaryLove');
+  const loveEntries = Object.entries(loveNotes).filter(([,v]) => v);
+  loveEl.innerHTML = loveEntries.length === 0
+    ? `<p class="empty-note">No love notes yet — write from your heart 💗</p>`
+    : loveEntries.map(([i,note]) => `
+        <div class="note-entry" style="border-bottom:1px solid #FCE7F3;">
+          <div class="note-day" style="color:${DAYS[i].color}">${DAYS[i].emoji} ${DAYS[i].full}</div>
+          <p class="note-text">"${note}"</p>
+        </div>`).join('');
+
+  // Change notes
+  const changeEl = document.getElementById('summaryChange');
+  const changeEntries = Object.entries(changeNotes).filter(([,v]) => v);
+  changeEl.innerHTML = changeEntries.length === 0
+    ? `<p class="empty-note">Reflections will appear here as you write them ✨</p>`
+    : changeEntries.map(([i,note]) => `
+        <div class="note-entry" style="border-bottom:1px solid #EDE9FE;">
+          <div class="note-day" style="color:${DAYS[i].color}">${DAYS[i].emoji} ${DAYS[i].full}</div>
+          <p class="note-text">"${note}"</p>
+        </div>`).join('');
+}
+
+function spawnHearts() {
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      const h = document.createElement('div');
+      h.className = 'float-heart';
+      h.textContent = '💗';
+      h.style.left = `${20 + Math.random() * 60}%`;
+      h.style.top = `${30 + Math.random() * 30}%`;
+      document.body.appendChild(h);
+      setTimeout(() => h.remove(), 3600);
+    }, i * 150);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
